@@ -195,7 +195,6 @@ void StartNinjabrainClient() {
 }
 
 void StopNinjabrainClient() {
-    std::vector<std::thread> threadsToJoin;
     std::unique_ptr<NinjabrainApiSession> session;
     {
         std::lock_guard<std::mutex> lock(g_ninjabrainClientMutex);
@@ -203,7 +202,7 @@ void StopNinjabrainClient() {
         session = std::move(g_ninjabrainClientSession);
         for (auto& stopThread : g_ninjabrainClientStopThreads) {
             if (stopThread.thread.joinable() && stopThread.thread.get_id() != std::this_thread::get_id()) {
-                threadsToJoin.push_back(std::move(stopThread.thread));
+                stopThread.thread.detach();
             }
         }
         g_ninjabrainClientStopThreads.clear();
@@ -211,9 +210,6 @@ void StopNinjabrainClient() {
     }
 
     if (session) { session->Stop(); }
-    for (auto& threadToJoin : threadsToJoin) {
-        if (threadToJoin.joinable()) { threadToJoin.join(); }
-    }
 }
 
 void StopNinjabrainClientAsync() {
