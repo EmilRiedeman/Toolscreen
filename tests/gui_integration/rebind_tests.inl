@@ -701,6 +701,29 @@ void RunKeyRebindDeepSuppressionEligibilityTest(TestRunMode runMode = TestRunMod
            "Expected Shift->Shift (preserving) to NOT deep-suppress.");
 }
 
+void RunKeyRebindSuppressedAltClearsSystemContextTest(TestRunMode runMode = TestRunMode::Automated) {
+    (void)runMode;
+
+    ClearLowLevelSuppressedKeysForTest();
+    QueueSuppressedLowLevelKeyForTest(VK_LMENU, 0x0038, true);
+
+    UINT uMsg = WM_SYSKEYDOWN;
+    LPARAM lParam = BuildTestKeyboardMessageLParam(VK_F3, true, true);
+    Expect(NormalizeSystemKeyMessageForSuppressedAltForTest(uMsg, VK_F3, lParam),
+           "Expected a key following a suppressed Alt press to be normalized.");
+    Expect(uMsg == WM_KEYDOWN,
+           "Expected a key following a suppressed Alt press to use WM_KEYDOWN.");
+    Expect((lParam & (static_cast<LPARAM>(1) << 29)) == 0,
+           "Expected a key following a suppressed Alt press to clear the Alt context bit.");
+
+    uMsg = WM_SYSKEYDOWN;
+    lParam = BuildTestKeyboardMessageLParam(VK_MENU, true, true);
+    Expect(!NormalizeSystemKeyMessageForSuppressedAltForTest(uMsg, VK_MENU, lParam),
+           "Expected the suppressed Alt message itself to remain a system-key message.");
+
+    ClearLowLevelSuppressedKeysForTest();
+}
+
 void RunHotkeyRuntimeExclusionDetectsSuppressedCtrlShiftTest(TestRunMode runMode = TestRunMode::Automated) {
     (void)runMode;
 
