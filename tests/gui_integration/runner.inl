@@ -97,6 +97,7 @@ const auto& GetTestCaseDefinitions() {
         {"hotkey-runtime-exclusion-detects-low-level-suppressed-key", &RunHotkeyRuntimeExclusionDetectsLowLevelSuppressedKeyTest},
         {"hotkey-runtime-exclusion-detects-suppressed-ctrl-shift", &RunHotkeyRuntimeExclusionDetectsSuppressedCtrlShiftTest},
         {"key-rebind-deep-suppression-eligibility", &RunKeyRebindDeepSuppressionEligibilityTest},
+        {"key-rebind-suppressed-alt-clears-system-context", &RunKeyRebindSuppressedAltClearsSystemContextTest},
         {"key-rebind-runtime-full-forwarding", &RunKeyRebindRuntimeFullForwardingTest},
         {"key-rebind-runtime-split-vk-output", &RunKeyRebindRuntimeSplitVkOutputTest},
         {"key-rebind-runtime-split-unicode-output", &RunKeyRebindRuntimeSplitUnicodeOutputTest},

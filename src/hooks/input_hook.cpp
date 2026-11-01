@@ -4103,6 +4103,43 @@ bool IsKeyCurrentlyLowLevelSuppressed(DWORD vk) {
     return s_lowLevelSuppressedKeys.find(vk) != s_lowLevelSuppressedKeys.end();
 }
 
+static bool IsAltCurrentlyLowLevelSuppressed() {
+    std::lock_guard<std::mutex> lock(s_lowLevelSuppressedKeysMutex);
+    for (const auto& [vk, state] : s_lowLevelSuppressedKeys) {
+        (void)state;
+        if (IsAltVk(vk)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool NormalizeSystemKeyMessageForSuppressedAlt(UINT& uMsg, WPARAM wParam, LPARAM& lParam) {
+    if (!IsAltCurrentlyLowLevelSuppressed() || IsAltVk(static_cast<DWORD>(wParam))) {
+        return false;
+    }
+
+    switch (uMsg) {
+    case WM_SYSKEYDOWN:
+        uMsg = WM_KEYDOWN;
+        break;
+    case WM_SYSKEYUP:
+        uMsg = WM_KEYUP;
+        break;
+    case WM_SYSCHAR:
+        uMsg = WM_CHAR;
+        break;
+    case WM_SYSDEADCHAR:
+        uMsg = WM_DEADCHAR;
+        break;
+    default:
+        return false;
+    }
+
+    lParam &= ~(static_cast<LPARAM>(1) << 29);
+    return true;
+}
+
 static bool IsCapsLockSuppressionEnabled() {
     if (g_isShuttingDown.load(std::memory_order_acquire)) return false;
     if (!DoesSubclassedWindowOwnForegroundInput()) return false;
@@ -5016,6 +5053,10 @@ bool ShouldDeepSuppressRebindForTest(DWORD fromKey, DWORD toKey) {
     rebind.toKey = toKey;
     const DWORD triggerVk = NormalizeModifierVkFromConfig(rebind.toKey, 0);
     return ShouldDeepSuppressModifierForRebind(rebind, fromKey, fromKey, true, false, triggerVk);
+}
+
+bool NormalizeSystemKeyMessageForSuppressedAltForTest(UINT& uMsg, WPARAM wParam, LPARAM& lParam) {
+    return NormalizeSystemKeyMessageForSuppressedAlt(uMsg, wParam, lParam);
 }
 #endif
 
@@ -6081,6 +6122,7 @@ LRESULT CALLBACK SubclassedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
     if (!isLocalRepeatTagged && ConsumeNativeVulkanFastPathDuplicate(uMsg, wParam, lParam)) {
         return 0;
     }
+    NormalizeSystemKeyMessageForSuppressedAlt(uMsg, wParam, lParam);
 
     const bool isKeyboardRepeatMessage =
         (uMsg == WM_KEYDOWN || uMsg == WM_SYSKEYDOWN || uMsg == WM_CHAR || uMsg == WM_SYSCHAR) &&
@@ -6282,5 +6324,4 @@ LRESULT CALLBACK SubclassedWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
     }
     return forwarded;
 }
-
 
